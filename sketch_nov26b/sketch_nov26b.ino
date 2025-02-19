@@ -1,9 +1,9 @@
 //Define sensor pins
-#define IR_left A1
-#define IR_center A2
-#define IR_right A0
-#define PushButton 12
-#define led 10
+// #define IR_left A1
+// #define IR_center A2
+// #define IR_right A0
+// #define PushButton 12
+// #define led 10
 
 //Define pin numbers for encoders
 #define encoder1PinA 2
@@ -13,10 +13,10 @@
 
 //Variables for motor control
 const int maxSpeed2 = 50;
-const int maxSpeed = 50;
+const int maxSpeed = 10;
 const int lowSpeed = 100;
 const int dir1 = 6;  // Left motors direction
-const int pwm1 = 3;  // Left motors speed control
+const int pwm1 = 10;  // Left motors speed control
 const int dir2 = 8;  // Right motors direction
 const int pwm2 = 9;  // Right motors speed control
 bool is_on = 0;
@@ -26,12 +26,12 @@ volatile long encoder1Count = 0;
 volatile long encoder2Count = 0;
 
 //Variables for PID Control
-int target = maxSpeed;
+int target = maxSpeed; //target should be the other motor
 float u1;
 float u2;
-float kp = 0.0;
-float kd = 0.0;
-float ki = 0.0;
+float kp = 2.0;
+float kd = 1.0;
+float ki = 1.0;
 long previousTime = 0;
 float ePrevious = 0;
 float eIntegral = 0;
@@ -41,11 +41,11 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  pinMode(PushButton, INPUT_PULLUP);
-  pinMode(IR_left, INPUT);
-  pinMode(IR_center, INPUT);
-  pinMode(IR_right, INPUT);
-  pinMode(led, OUTPUT);
+  // pinMode(PushButton, INPUT_PULLUP);
+  // pinMode(IR_left, INPUT);
+  // pinMode(IR_center, INPUT);
+  // pinMode(IR_right, INPUT);
+  // pinMode(led, OUTPUT);
 
   pinMode(dir1, OUTPUT);
   pinMode(pwm1, OUTPUT);
@@ -64,53 +64,65 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  int L, C, R;
+  // int L, C, R;
 
-  L = analogRead(IR_left);
-  C = analogRead(IR_center);
-  R = analogRead(IR_right);
+  // L = analogRead(IR_left);
+  // C = analogRead(IR_center);
+  // R = analogRead(IR_right);
 
-  if (digitalRead(PushButton) == 0) {
-    while (digitalRead(PushButton) == 0) {}
-    is_on = !is_on;
-  }
+  // if (digitalRead(PushButton) == 0) {
+  //   while (digitalRead(PushButton) == 0) {}
+  //   is_on = !is_on;
+  // }
 
-  if (is_on == 1) {
-    digitalWrite(led, 1);
-    Serial.print("C= ");
-    Serial.print(C);
-    Serial.print(" L= ");
-    Serial.print(L);
-    Serial.print(" R= ");
-    Serial.println(R);
+  // if (is_on == 1) {
+  //   digitalWrite(led, 1);
+  //   Serial.print("C= ");
+  //   Serial.print(C);
+  //   Serial.print(" L= ");
+  //   Serial.print(L);
+  //   Serial.print(" R= ");
+  //   Serial.println(R);
 
     u1= pidController(target, kp, kd, ki, encoder1Count);
     u2= pidController(target, kp, kd, ki, encoder2Count);
+    Serial.println(u1);
+    Serial.println(u2);
+    Serial.println("");
 
-    if (C > 900) {
-        accelerateForward();
-        Serial.print("Forward ");
-        Serial.print("C= ");
-        Serial.println(C);
-    } else if (L > 500) {
-        accelerateTurnLeft();
-        Serial.print("Left ");
-        Serial.print("L= ");
-        Serial.println(L);
-    } else if (R > 500) {
-        accelerateTurnRight();
-        Serial.print("Right ");
-        Serial.print("R= ");
-        Serial.println(R);
-    } else {
-      accelerateback();
-      Serial.println("back");
-    }
-  } else {
-    digitalWrite(led, 0);
-    stop_mymotor();
-  }
-  Serial.println(is_on);
+    accelerateForward();
+    delay(1000);
+    accelerateTurnLeft();
+    delay(1000);
+    accelerateTurnRight();
+    delay(1000);
+    accelerateback();
+    delay(1000);
+
+  //   if (C > 900) {
+  //       accelerateForward();
+  //       Serial.print("Forward ");
+  //       Serial.print("C= ");
+  //       Serial.println(C);
+  //   } else if (L > 500) {
+  //       accelerateTurnLeft();
+  //       Serial.print("Left ");
+  //       Serial.print("L= ");
+  //       Serial.println(L);
+  //   } else if (R > 500) {
+  //       accelerateTurnRight();
+  //       Serial.print("Right ");
+  //       Serial.print("R= ");
+  //       Serial.println(R);
+  //   } else {
+  //     accelerateback();
+  //     Serial.println("back");
+  //   }
+  // } else {
+  //   digitalWrite(led, 0);
+  //   stop_mymotor();
+  // }
+  // Serial.println(is_on);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,7 +145,7 @@ void accelerateTurnLeft() {
   digitalWrite(dir2, HIGH);
   analogWrite(pwm1, fabs(u1));
   analogWrite(pwm2, fabs(u2));
-  delay (1200);
+  // delay (1200);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void accelerateTurnRight() {
@@ -141,7 +153,7 @@ void accelerateTurnRight() {
   digitalWrite(dir2, LOW);
   analogWrite(pwm1, fabs(u1));
   analogWrite(pwm2, fabs(u2));
-  delay (1200);
+  // delay (1200);
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
