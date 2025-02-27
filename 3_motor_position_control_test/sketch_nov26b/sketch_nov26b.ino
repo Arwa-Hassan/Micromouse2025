@@ -25,15 +25,19 @@ bool is_on = 0;
 volatile long encoder1Count = 0;
 volatile long encoder2Count = 0;
 
+//Motor revolutions
+float motor1revs= 0;
+float motor2revs= 0;
+
 //Variables for PID Control
-int target_ticks = 0;
-int target_angle= 90; //deg
+float target_revs = 0;
+float target_angle= 360*2; //deg
 int one_rev= 360; //deg
-float u1; //1st motor gain
-float u2; //2nd motor gain 
-float kp1 = 2.0; //1st motor constants
-float kd1 = 1.0;
-float ki1 = 1.0;
+float u1=0; //1st motor gain
+float u2=0; //2nd motor gain 
+float kp1 = 0.2; //1st motor constants
+float kd1 = 0.05;
+float ki1 = 0.0;
 float kp2 = 2.0; //2nd motor constants
 float kd2 = 1.0;
 float ki2 = 1.0;
@@ -45,10 +49,10 @@ bool dircetion2 = 1;
 
 //maze and robot constants
 const int cell_distance= 180; //mm
-const int ticks_per_rev= 360;
-const int wheel_rad= 66; //mm  //assuming the yellow wheel
+const int ticks_per_rev= 7;
+const int wheel_rad= 16; //mm  //small white wheels
 const int wheel_base= 300; //mm
-const int speed_factor= 1;
+const float speed_factor= 5;
 const int gear_ratio= 10; 
 
 void setup() {
@@ -75,20 +79,33 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(encoder1PinA), handleEncoder1, RISING);
   attachInterrupt(digitalPinToInterrupt(encoder2PinA), handleEncoder2, RISING);
 
-  target_ticks= (target_angle*ticks_per_rev)/one_rev;
+  target_revs = (target_angle) / one_rev;
+  Serial.println(target_revs);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
+  //manual test
+  // digitalWrite(dir2, 1);
+  // analogWrite(pwm2, 10); //should be value from 0 to 255 
+
   //move motor to a specific angle
   //k parameters tuning program
-  if(abs(target_ticks-encoder1Count)>1 && abs(target_ticks-encoder2Count)>1){
-    u1= pidController(target_ticks, kp1, kd1, ki1, encoder1Count);
-    u2= pidController(u1, kp2, kd2, ki2, encoder2Count);
-    dircetion1=(u1>0)? 1 : 0 ;
+  if(abs(target_revs-motor1revs)>0.1 && abs(target_revs-motor2revs)>0.1){
+    u2= pidController(target_revs, kp1, kd1, ki1, motor2revs);
+    Serial.println(u2);
+    // u2= pidController(u1, kp2, kd2, ki2, encoder2Count);
     dircetion2=(u2>0)? 1 : 0 ;
-    accelerateForward();
+    // dircetion2=(u2>0)? 1 : 0 ;
+    digitalWrite(dir2, dircetion2);
+    analogWrite(pwm2, fabs(u2)*speed_factor);
+
+    Serial.println(dircetion2);
+    Serial.println(fabs(u2)*speed_factor);
+    Serial.println("");
+
+    // accelerateForward();
   }
   else{
     stop_mymotor();
@@ -100,7 +117,7 @@ void loop() {
 void accelerateForward() {
   digitalWrite(dir1, dircetion1);
   digitalWrite(dir2, dircetion2);
-  analogWrite(pwm1, fabs(u1)*speed_factor);
+  analogWrite(pwm1, fabs(u1)*speed_factor); //should be value from 0 to 255 
   analogWrite(pwm2, fabs(u2)*speed_factor);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,6 +156,11 @@ void handleEncoder1() {
   else{
     encoder1Count--;
   }
+  //handeling revs
+  if(encoder1Count>=(ticks_per_rev*gear_ratio)){
+    motor1revs++;
+    encoder1Count-=(ticks_per_rev*gear_ratio);
+  }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void handleEncoder2() {
@@ -148,13 +170,18 @@ void handleEncoder2() {
   else{
     encoder2Count--;
   }
+  //handeling revs
+  if(encoder2Count>=(ticks_per_rev*gear_ratio)){
+    motor2revs++;
+    encoder2Count-=(ticks_per_rev*gear_ratio);
+  }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-float pidController(int target, float kp, float kd, float ki, volatile long encoderCount) {
+float pidController(int target, float kp, float kd, float ki, volatile long rev_Count) {
   long currentTime = micros();
   float deltaT = ((float)(currentTime - previousTime)) / 1.0e6;
 
-  int e = encoderCount - target;
+  int e = rev_Count - target;
   float eDerivative = (e - ePrevious) / deltaT;
   eIntegral = eIntegral + e * deltaT;
 
@@ -167,8 +194,8 @@ float pidController(int target, float kp, float kd, float ki, volatile long enco
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void calculate_target(char dir) {
-  if (dir == 'f') target_ticks= (cell_distance * ticks_per_rev)/(2 * 3.14 * wheel_rad);
-  else target_ticks= (wheel_base * ticks_per_rev)/(8 * wheel_rad);
+  if (dir == 'f') target_revs= (cell_distance * ticks_per_rev)/(2 * 3.14 * wheel_rad);
+  else target_revs= (wheel_base * ticks_per_rev)/(8 * wheel_rad);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*void stopMovingGradually() {
